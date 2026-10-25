@@ -1,0 +1,14 @@
+node_modules/
+dist/
+APK/
+android/.gradle/
+android/local.properties
+android/**/build/
+android/**/generated/
+android/**/captures/
+android/**/lint-results.xml
+android/**/*.iml
+.vscode/
+.idea/
+.DS_Store
+*.log
