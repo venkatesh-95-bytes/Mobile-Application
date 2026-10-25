@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Home Workout Interval Timer</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --work: #22c55e;
+      --rest: #3b82f6;
+      --danger: #ef4444;
+      --accent: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px 16px 40px;
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    h1 { font-size: 1.4rem; text-align: center; margin-bottom: 16px; font-weight: 700; }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    input:disabled { opacity: 0.5; }
+    .timer-display {
+      text-align: center;
+      padding: 24px 12px;
+      border-radius: 14px;
+      transition: background 0.3s ease;
+      background: #0f172a;
+      border: 2px solid #334155;
+    }
+    .timer-display.work { border-color: var(--work); background: rgba(34, 197, 94, 0.12); }
+    .timer-display.rest { border-color: var(--rest); background: rgba(59, 130, 246, 0.12); }
+    .phase-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      background: #334155;
+    }
+    .work .phase-badge { background: var(--work); color: #052e16; }
+    .rest .phase-badge { background: var(--rest); color: #082f49; }
+    .time-text { font-size: 4.2rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .round-text { font-size: 0.95rem; color: var(--muted); margin-top: 8px; }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    button {
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    button:active { opacity: 0.8; }
+    .btn-primary { background: var(--work); color: #052e16; }
+    .btn-pause { background: var(--accent); color: #451a03; }
+    .btn-reset { background: #334155; color: var(--text); }
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .history-header h2 { font-size: 1.05rem; }
+    .btn-clear {
+      background: transparent;
+      color: var(--danger);
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .history-list { list-style: none; max-height: 240px; overflow-y: auto; }
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #334155;
+      font-size: 0.9rem;
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .empty-msg { color: var(--muted); font-size: 0.88rem; text-align: center; padding: 12px 0; }
+  </style>
+</head>
+<body>
+
+  <h1>Workout Interval Timer</h1>
+
+  <!-- Setup Card -->
+  <div class="card">
+    <div>
+      <label for="exerciseName">Exercise Name</label>
+      <input type="text" id="exerciseName" value="Push-ups / Jumping Jacks" placeholder="e.g., Squats" />
+    </div>
+    <div class="form-grid">
+      <div>
+        <label for="workInput">Work (sec)</label>
+        <input type="number" id="workInput" value="30" min="5" max="600" />
+      </div>
+      <div>
+        <label for="restInput">Rest (sec)</label>
+        <input type="number" id="restInput" value="15" min="5" max="600" />
+      </div>
+      <div>
+        <label for="roundsInput">Rounds</label>
+        <input type="number" id="roundsInput" value="4" min="1" max="50" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Timer Display & Controls Card -->
+  <div class="card">
+    <div id="timerBox" class="timer-display">
+      <span id="phaseBadge" class="phase-badge">Ready</span>
+      <div id="timeDisplay" class="time-text">00:30</div>
+      <div id="roundDisplay" class="round-text">Round 1 of 4</div>
+    </div>
+
+    <div class="controls">
+      <button id="startPauseBtn" class="btn-primary">Start</button>
+      <button id="resetBtn" class="btn-reset">Reset</button>
+    </div>
+  </div>
+
+  <!-- Completed Session History Card -->
+  <div class="card">
+    <div class="history-header">
+      <h2>Completed Sessions</h2>
+      <button id="clearHistoryBtn" class="btn-clear">Clear All</button>
+    </div>
+    <ul id="historyList" class="history-list"></ul>
+  </div>
+
+  <script>
+    const exerciseInput = document.getElementById('exerciseName');
+    const workInput = document.getElementById('workInput');
+    const restInput = document.getElementById('restInput');
+    const roundsInput = document.getElementById('roundsInput');
+    const timerBox = document.getElementById('timerBox');
+    const phaseBadge = document.getElementById('phaseBadge');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const roundDisplay = document.getElementById('roundDisplay');
+    const startPauseBtn = document.getElementById('startPauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const historyList = document.getElementById('historyList');
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+
+    let intervalId = null;
+    let isRunning = false;
+    let phase = 'READY'; // READY, WORK, REST
+    let remainingSec = 30;
+    let currentRound = 1;
+    let totalRounds = 4;
+    let audioCtx = null;
+
+    function playBeep(freq = 660, duration = 0.18) {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function formatTime(sec) {
+      const m = String(Math.floor(sec / 60)).padStart(2, '0');
+      const s = String(sec % 60).padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function setInputsDisabled(disabled) {
+      exerciseInput.disabled = disabled;
+      workInput.disabled = disabled;
+      restInput.disabled = disabled;
+      roundsInput.disabled = disabled;
+    }
+
+    function updateUI() {
+      timeDisplay.textContent = formatTime(remainingSec);
+      roundDisplay.textContent = `Round ${currentRound} of ${totalRounds}`;
+      timerBox.className = 'timer-display';
+
+      if (phase === 'WORK') {
+        timerBox.classList.add('work');
+        phaseBadge.textContent = `Work: ${exerciseInput.value.trim() || 'Exercise'}`;
+      } else if (phase === 'REST') {
+        timerBox.classList.add('rest');
+        phaseBadge.textContent = 'Rest Period';
+      } else {
+        phaseBadge.textContent = 'Ready';
+      }
+
+      if (isRunning) {
+        startPauseBtn.textContent = 'Pause';
+        startPauseBtn.className = 'btn-pause';
+      } else {
+        startPauseBtn.textContent = phase === 'READY' ? 'Start' : 'Resume';
+        startPauseBtn.className = 'btn-primary';
+      }
+    }
+
+    function saveCompletedSession() {
+      const history = JSON.parse(localStorage.getItem('workoutHistory') || '[]');
+      const workSec = parseInt(workInput.value, 10) || 30;
+      const restSec = parseInt(restInput.value, 10) || 15;
+      const rounds = parseInt(roundsInput.value, 10) || 1;
+      const totalDuration = (workSec * rounds) + (restSec * Math.max(0, rounds - 1));
+
+      history.unshift({
+        name: exerciseInput.value.trim() || 'Workout',
+        workSec,
+        restSec,
+        rounds,
+        totalDuration,
+        timestamp: new Date().toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+      });
+      localStorage.setItem('workoutHistory', JSON.stringify(history.slice(0, 30)));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const history = JSON.parse(localStorage.getItem('workoutHistory') || '[]');
+      if (history.length === 0) {
+        historyList.innerHTML = '<li class="empty-msg">No completed workouts yet. Finish a session to log it!</li>';
+        return;
+      }
+      historyList.innerHTML = history.map(item => `
+        <li class="history-item">
+          <div>
+            <strong>${item.name}</strong>
+            <div class="history-meta">${item.rounds} rounds (${item.workSec}s work / ${item.restSec}s rest)</div>
+          </div>
+          <div style="text-align:right;">
+            <strong>${formatTime(item.totalDuration)}</strong>
+            <div class="history-meta">${item.timestamp}</div>
+          </div>
+        </li>
+      `).join('');
+    }
+
+    function tick() {
+      if (remainingSec > 1) {
+        remainingSec--;
+        if (remainingSec <= 3) playBeep(520, 0.1);
+        updateUI();
+        return;
+      }
+
+      if (phase === 'WORK') {
+        if (currentRound < totalRounds) {
+          phase = 'REST';
+          remainingSec = Math.max(1, parseInt(restInput.value, 10) || 15);
+          playBeep(440, 0.3);
+          updateUI();
+        } else {
+          // Workout complete
+          clearInterval(intervalId);
+          isRunning = false;
+          playBeep(880, 0.5);
+          saveCompletedSession();
+          phase = 'READY';
+          currentRound = 1;
+          remainingSec = Math.max(1, parseInt(workInput.value, 10) || 30);
+          setInputsDisabled(false);
+          updateUI();
+          phaseBadge.textContent = 'Completed!';
+        }
+      } else if (phase === 'REST') {
+        currentRound++;
+        phase = 'WORK';
+        remainingSec = Math.max(1, parseInt(workInput.value, 10) || 30);
+        playBeep(780, 0.3);
+        updateUI();
+      }
+    }
+
+    startPauseBtn.addEventListener('click', () => {
+      if (isRunning) {
+        clearInterval(intervalId);
+        isRunning = false;
+        updateUI();
+      } else {
+        if (phase === 'READY') {
+          totalRounds = Math.max(1, parseInt(roundsInput.value, 10) || 1);
+          remainingSec = Math.max(1, parseInt(workInput.value, 10) || 30);
+          currentRound = 1;
+          phase = 'WORK';
+          setInputsDisabled(true);
+          playBeep(780, 0.25);
+        }
+        isRunning = true;
+        updateUI();
+        intervalId = setInterval(tick, 1000);
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      clearInterval(intervalId);
+      isRunning = false;
+      phase = 'READY';
+      currentRound = 1;
+      totalRounds = Math.max(1, parseInt(roundsInput.value, 10) || 1);
+      remainingSec = Math.max(1, parseInt(workInput.value, 10) || 30);
+      setInputsDisabled(false);
+      updateUI();
+    });
+
+    [workInput, roundsInput].forEach(input => {
+      input.addEventListener('input', () => {
+        if (phase === 'READY') {
+          totalRounds = Math.max(1, parseInt(roundsInput.value, 10) || 1);
+          remainingSec = Math.max(1, parseInt(workInput.value, 10) || 30);
+          updateUI();
+        }
+      });
+    });
+
+    clearHistoryBtn.addEventListener('click', () => {
+      localStorage.removeItem('workoutHistory');
+      renderHistory();
+    });
+
+    renderHistory();
+    updateUI();
+  </script>
+</body>
+</html>
